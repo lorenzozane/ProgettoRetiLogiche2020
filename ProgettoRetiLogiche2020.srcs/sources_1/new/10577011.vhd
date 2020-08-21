@@ -76,7 +76,7 @@ signal o_reg3 : std_logic_vector (7 downto 0);
 signal sub : std_logic_vector (7 downto 0);
 signal d_sel : std_logic;
 
-type S is (S0, S1, S2, S3);
+type S is (S0, S1, S2, S3, S4);
 signal cur_state, next_state : S;
 
 begin
@@ -101,9 +101,6 @@ begin
             if(r2_load = '1') then
                 o_reg2 <= i_data;
             end if;
-            if(r3_load = '1') then
-                o_reg3 <= i_data;
-            end if;
         end if;
     end process;
     
@@ -126,8 +123,8 @@ begin
                             (sub = "00000010") or
                             (sub = "00000011")))
                         or (o_reg3 = "00000111" and
-                            (sub >= "00000011" or
-                            sub <= "00000000"))) else '0';
+                            (sub > "00000011" or
+                            sub < "00000000"))) else '0';
 
     d_sel <= '0' when (o_reg3 /= "00001000"
                         and ((sub = "00000000") or
@@ -188,6 +185,8 @@ begin
                     next_state <= S3;
                 end if;
             when S3 =>
+                next_state <= S4;
+            when S4 =>
                 next_state <= S0;
         end case;
     end process;
@@ -228,6 +227,8 @@ begin
                 o_we <= '1';
                 r1_load <= '0';
                 r2_load <= '0';
+            when S4 =>
+                o_done <= '1';
         end case;
     end process;
 end Behavioral;
