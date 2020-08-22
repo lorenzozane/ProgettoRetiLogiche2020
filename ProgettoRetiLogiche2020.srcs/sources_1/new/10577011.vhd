@@ -58,6 +58,8 @@ component datapath is
         r1_load : in std_logic;
         r2_load : in std_logic;
         r3_load : in std_logic;
+        rCounter_load : in std_logic;
+        rCounter_sel : in std_logic;
         o_end : out std_logic);
 end component;
 
@@ -65,13 +67,18 @@ end component;
 signal r1_load : std_logic;
 signal r2_load : std_logic;
 signal r3_load : std_logic;
+signal rCounter_load : std_logic;
+signal rCounter_sel : std_logic;
 signal o_end : std_logic;
-signal temp : std_logic_vector (15 downto 0);
+--signal temp : std_logic_vector (15 downto 0);
 
 -- Datapath signal
 signal o_reg1 : std_logic_vector (7 downto 0);
 signal o_reg2 : std_logic_vector (7 downto 0);
-signal o_reg3 : std_logic_vector (7 downto 0);
+signal o_reg3 : std_logic_vector (15 downto 0);
+signal mux_regCounter : std_logic_vector (15 downto 0);
+signal add_regCounter : std_logic_vector (15 downto 0);
+signal o_regCounter : std_logic_vector (15 downto 0);
 --signal o_reg4 : std_logic_vector (7 downto 0);
 signal sub : std_logic_vector (7 downto 0);
 signal d_sel : std_logic;
@@ -107,50 +114,68 @@ begin
     process(i_clk, i_rst)
     begin
         if(i_rst = '1') then
-            o_reg3 <= "00000000";
+            o_reg3 <= "0000000000000000";
         elsif i_clk'event and i_clk = '1' then
             if(r3_load = '1') then
-                o_reg3 <= i_data;
+--                o_reg3 <= temp;
             end if;
         end if;
     end process;
     
     sub <= o_reg1 - o_reg2;
     
-    o_end <= '1' when ((o_reg3 /= "00001000"
+    o_end <= '1' when cur_state = S2 and ((o_reg3 /= "0000000000001000"
                         and ((sub = "00000000") or
                             (sub = "00000001") or
                             (sub = "00000010") or
                             (sub = "00000011")))
-                        or (o_reg3 = "00000111" and
+                        or (o_reg3 = "000000000000111" and
                             (sub > "00000011" or
                             sub < "00000000"))) else '0';
 
-    d_sel <= '0' when (o_reg3 /= "00001000"
+    d_sel <= '0' when (o_reg3 /= "0000000000001000"
                         and ((sub = "00000000") or
                             (sub = "00000001") or
                             (sub = "00000010") or
                             (sub = "00000011")));
 
-    d_sel <= '1' when(o_reg3 = "00000111" and
+    d_sel <= '1' when(o_reg3 = "0000000000000111" and
                             (sub >= "00000011" or
                             sub <= "00000000"));
 
-    o_data <= ('1' & o_reg3(2 downto 0) & "0001") when (o_reg3 /= "00001000"
+    o_data <= ('1' & o_reg3(2 downto 0) & "0001") when (o_reg3 /= "0000000000001000"
                             and (sub = "00000000"));
 
-    o_data <= ('1' & o_reg3(2 downto 0) & "0010") when (o_reg3 /= "00001000"
+    o_data <= ('1' & o_reg3(2 downto 0) & "0010") when (o_reg3 /= "0000000000001000"
                             and (sub = "00000001"));
                             
-    o_data <= ('1' & o_reg3(2 downto 0) & "0100") when (o_reg3 /= "00001000"
+    o_data <= ('1' & o_reg3(2 downto 0) & "0100") when (o_reg3 /= "0000000000001000"
                             and (sub = "00000010"));
                             
-    o_data <= ('1' & o_reg3(2 downto 0) & "1000") when (o_reg3 /= "00001000"
+    o_data <= ('1' & o_reg3(2 downto 0) & "1000") when (o_reg3 /= "0000000000001000"
                             and (sub = "00000011"));
     
-    o_data <= (o_reg1) when(o_reg3 = "00000111" and
+    o_data <= (o_reg1) when(o_reg3 = "0000000000000111" and
                             (sub > "00000011" or
                             sub < "00000000"));
+
+    with rCounter_sel select
+        mux_regCounter <= "0000000000000000" when '0',
+                        add_regCounter when '1',
+                        "XXXXXXXXXXXXXXXX" when others;
+
+    add_regCounter <= o_regCounter + "0000000000000001";
+
+    process(i_clk, i_rst)
+    begin
+        if(i_rst = '1') then
+            o_regCounter <= "0000000000000000";
+        elsif i_clk'event and i_clk = '1' then
+            if(rCounter_load = '1') then
+                o_regCounter <= mux_regCounter;
+            end if;
+        end if;
+    end process;
 
 --    with d_sel select
 --        o_data <=   when '0',
@@ -196,37 +221,49 @@ begin
         r1_load <= '0';
         r2_load <= '0';
         r3_load <= '0';
+        rCounter_load <= '0';
+        rCounter_sel <= '0';
         o_address <= "0000000000001000";
         o_en <= '0';
         o_we <= '0';
         o_done <= '0';
         case cur_state is
             when S0 =>
-            when S1 =>
                 o_address <= "0000000000001000";
-                temp <= "0000000000001000";
+--                temp <= "0000000000001000";
+                o_en <= '1';
+            when S1 =>
+                o_address <= "0000000000000000";
+--                temp <= "0000000000000000";
                 o_en <= '1';
                 o_we <= '0';
                 r1_load <= '1';
                 r2_load <= '0';
+                r3_load <= '0';
             when S2 =>
-                if (temp = "0000000000001000") then
-                    o_address <= "0000000000000000";
-                    temp <= "0000000000000000";
-                else
-                    o_address <= std_logic_vector(unsigned(temp) + 1);
-                    temp <= std_logic_vector(unsigned(temp) + 1);
-                end if;
+                o_address <= std_logic_vector(unsigned(o_regCounter) + 1);
+--                    o_address <= std_logic_vector(unsigned(temp) + 1);
+--                    temp <= std_logic_vector(unsigned(temp) + 1);
+--                end if;
                 o_en <= '1';
                 o_we <= '0';
                 r1_load <= '0';
                 r2_load <= '1';
+                r3_load <= '1';
+                if(rCounter_load = '0') then
+                    rCounter_load <= '1';
+                    rCounter_sel <= '0';
+                else
+                    rCounter_load <= '1';
+                    rCounter_sel <= '1';
+                end if;
             when S3 =>
                 o_address <= "0000000000001001";
                 o_en <= '1';
                 o_we <= '1';
                 r1_load <= '0';
                 r2_load <= '0';
+                r3_load <= '0';
             when S4 =>
                 o_done <= '1';
         end case;
