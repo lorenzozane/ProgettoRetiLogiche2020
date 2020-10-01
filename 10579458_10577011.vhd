@@ -1,20 +1,11 @@
 ----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
+-- Company: Politecnico di Milano
 -- 
 -- Create Date: 06.08.2020 16:53:56
--- Design Name: 
--- Module Name: 10577011 - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
+-- Module Name: 10579458_10577011 - Behavioral
+-- Project Name: Prova Finale - Reti Logiche - 2020
 -- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
+-- Revision 1.0 - Component tested
 -- 
 ----------------------------------------------------------------------------------
 
